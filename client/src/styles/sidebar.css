@@ -192,3 +192,20 @@
   border-color: rgba(255, 255, 255, 0.15);
 }
 
+/* Notification Badge */
+.badge {
+  background: #ff4757;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 10px;
+  margin-left: 0.4rem;
+  animation: badgePop 0.3s ease;
+}
+
+@keyframes badgePop {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}

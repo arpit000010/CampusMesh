@@ -5,6 +5,7 @@
 import ChatRequest from "../../models/ChatRequest.js";
 import Room from "../../models/Room.js";
 import ApiError from "../../utils/ApiError.js";
+import mongoose from "mongoose";
 import {
   CHAT_REQUEST_STATUS,
   ROOM_TYPES,
@@ -54,13 +55,16 @@ export const sendRequest = async (fromUserId, toUserId, message) => {
 
 // ── Get pending requests for a user ──────────────────────────
 export const getMyRequests = async (userId) => {
+  // Ensure userId is an ObjectId for proper query matching
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+
   const received = await ChatRequest.find({
-    to: userId,
+    to: userObjectId,
     status: CHAT_REQUEST_STATUS.PENDING,
   }).populate("from", "username displayName avatar");
 
   const sent = await ChatRequest.find({
-    from: userId,
+    from: userObjectId,
     status: CHAT_REQUEST_STATUS.PENDING,
   }).populate("to", "username displayName avatar");
 

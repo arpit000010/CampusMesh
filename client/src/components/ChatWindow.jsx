@@ -10,6 +10,8 @@ const ChatWindow = ({ room }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -39,25 +41,46 @@ const ChatWindow = ({ room }) => {
     inputRef.current?.focus();
   }, [room]);
 
-  // Listen for new real-time messages
+  // Listen for new real-time messages + typing
   useEffect(() => {
     if (!socket || !room) return;
 
-    // Tell server we're actively viewing this room
     socket.emit("join_room", { roomId: room._id });
 
     const handleNewMessage = (message) => {
-      // Only add if it's for the current room
       if (message.room === room._id) {
         setMessages((prev) => [...prev, message]);
+        // Remove from typing when they send a message
+        setTypingUsers((prev) =>
+          prev.filter((u) => u.userId !== message.sender?._id),
+        );
       }
     };
 
+    const handleTyping = ({ userId, username, isTyping, roomId }) => {
+      if (roomId !== room._id) return;
+      if (userId === user?._id) return; // ignore own typing
+
+      setTypingUsers((prev) => {
+        if (isTyping) {
+          if (!prev.find((u) => u.userId === userId)) {
+            return [...prev, { userId, username }];
+          }
+          return prev;
+        } else {
+          return prev.filter((u) => u.userId !== userId);
+        }
+      });
+    };
+
     socket.on("new_message", handleNewMessage);
+    socket.on("user_typing", handleTyping);
 
     return () => {
       socket.off("new_message", handleNewMessage);
+      socket.off("user_typing", handleTyping);
       socket.emit("leave_room", { roomId: room._id });
+      setTypingUsers([]);
     };
   }, [socket, room]);
 
@@ -154,6 +177,17 @@ const ChatWindow = ({ room }) => {
             );
           })
         )}
+        {typingUsers.length > 0 && (
+          <div className="typing-indicator">
+            <span className="typing-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            {typingUsers.map((u) => u.username).join(", ")}{" "}
+            {typingUsers.length === 1 ? "is" : "are"} typing...
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
@@ -164,7 +198,17 @@ const ChatWindow = ({ room }) => {
           type="text"
           placeholder="Type a message..."
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={(e) => {
+            setNewMessage(e.target.value);
+            // Emit typing events
+            if (socket && room) {
+              socket.emit("typing_start", { roomId: room._id });
+              clearTimeout(typingTimeoutRef.current);
+              typingTimeoutRef.current = setTimeout(() => {
+                socket.emit("typing_stop", { roomId: room._id });
+              }, 2000);
+            }
+          }}
         />
         <button type="submit" disabled={!newMessage.trim()}>
           ➤
