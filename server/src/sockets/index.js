@@ -122,11 +122,6 @@ export const initializeSocket = (httpServer) => {
     registerChatHandlers(io, socket);
     registerRoomHandlers(io, socket);
     registerPresenceHandlers(io, socket);
-
-    // ── Handle disconnect ──────────────────────────────────
-    socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
-      console.log(`🔴 User disconnected: ${socket.user.username} (${reason})`);
-    });
   });
 
   console.log("🔌 Socket.io: initialized with JWT auth");
