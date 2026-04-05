@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.io Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #e0e0e0; }
+    h1 { color: #00d2ff; }
+    #log { background: #16213e; padding: 15px; border-radius: 8px; white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
+    input { padding: 8px; width: 300px; background: #16213e; color: white; border: 1px solid #00d2ff; border-radius: 4px; }
+    button { padding: 8px 16px; background: #00d2ff; color: #1a1a2e; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>🔌 CampusMesh Socket Test</h1>
+  <pre id="log"></pre>
+
+  <h3>Send a message:</h3>
+  <input id="roomId" placeholder="Room ID (from Postman)" />
+  <input id="msg" placeholder="Type a message..." />
+  <button onclick="sendMsg()">Send</button>
+
+  <script>
+    const log = (msg) => {
+      const el = document.getElementById('log');
+      el.textContent += msg + '\n';
+      el.scrollTop = el.scrollHeight;
+      console.log(msg);
+    };
+
+    // PASTE YOUR JWT TOKEN HERE
+    const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWQyM2U5ZTQxNGNjNjkwMWU0N2Q0YjciLCJpYXQiOjE3NzUzOTg1NzEsImV4cCI6MTc3NjAwMzM3MX0.8IsxkT8ZtxEom2p74IbHORb6EThQc2tyqF4uEzEPLrI";
+
+    const socket = io("http://localhost:5001", {
+      auth: { token: TOKEN }
+    });
+
+    socket.on("connect", () => {
+      log("✅ Connected! Socket ID: " + socket.id);
+    });
+
+    socket.on("connection_ack", (data) => {
+      log("✅ Server: " + JSON.stringify(data));
+    });
+
+    socket.on("new_message", (data) => {
+      log("💬 " + data.sender.username + ": " + data.content);
+    });
+
+    socket.on("user_typing", (data) => {
+      log("✏️ " + data.username + (data.isTyping ? " is typing..." : " stopped typing"));
+    });
+
+    socket.on("user_joined", (data) => {
+      log("🟢 " + data.username + " joined the room");
+    });
+
+    socket.on("connect_error", (err) => {
+      log("❌ Error: " + err.message);
+    });
+
+    function sendMsg() {
+      const roomId = document.getElementById('roomId').value;
+      const content = document.getElementById('msg').value;
+      if (!roomId || !content) return alert("Fill both fields!");
+
+      socket.emit("send_message", { roomId, content });
+      document.getElementById('msg').value = "";
+    }
+  </script>
+</body>
+</html>
