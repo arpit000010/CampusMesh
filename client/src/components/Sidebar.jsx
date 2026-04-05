@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import CreateRoom from "./CreateRoom";
+import ExploreRooms from "./ExploreRooms";
 import "../styles/sidebar.css";
 
 const Sidebar = ({ activeRoom, onSelectRoom }) => {
   const { user, logout } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showExplore, setShowExplore] = useState(false);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -22,12 +26,20 @@ const Sidebar = ({ activeRoom, onSelectRoom }) => {
     fetchRooms();
   }, []);
 
-  // Get display name for a room
   const getRoomDisplayName = (room) => {
     if (room.type === "group") return room.name;
-    // For private rooms, show the other person's name
     const otherUser = room.members?.find((m) => m._id !== user._id);
     return otherUser?.displayName || otherUser?.username || "Private Chat";
+  };
+
+  const handleRoomCreated = (room) => {
+    setRooms((prev) => [room, ...prev]);
+    onSelectRoom(room);
+  };
+
+  const handleRoomJoined = (room) => {
+    setRooms((prev) => [room, ...prev]);
+    onSelectRoom(room);
   };
 
   return (
@@ -47,6 +59,22 @@ const Sidebar = ({ activeRoom, onSelectRoom }) => {
         </div>
         <button className="logout-btn" onClick={logout} title="Logout">
           ⏻
+        </button>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="sidebar-actions">
+        <button
+          className="action-btn create"
+          onClick={() => setShowCreate(true)}
+        >
+          + New Room
+        </button>
+        <button
+          className="action-btn explore"
+          onClick={() => setShowExplore(true)}
+        >
+          🔍 Explore
         </button>
       </div>
 
@@ -80,6 +108,20 @@ const Sidebar = ({ activeRoom, onSelectRoom }) => {
           ))
         )}
       </div>
+
+      {/* Modals */}
+      {showCreate && (
+        <CreateRoom
+          onClose={() => setShowCreate(false)}
+          onRoomCreated={handleRoomCreated}
+        />
+      )}
+      {showExplore && (
+        <ExploreRooms
+          onClose={() => setShowExplore(false)}
+          onRoomJoined={handleRoomJoined}
+        />
+      )}
     </div>
   );
 };

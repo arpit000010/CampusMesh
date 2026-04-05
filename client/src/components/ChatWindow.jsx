@@ -123,7 +123,8 @@ const ChatWindow = ({ room }) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isOwn = msg.sender?._id === user?._id;
+            const isOwn = msg.sender?._id?.toString() === user?._id?.toString();
+
             return (
               <div
                 key={msg._id}

@@ -150,3 +150,45 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* Action Buttons */
+.sidebar-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 0.75rem 0;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 0.55rem;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.action-btn.create {
+  background: linear-gradient(135deg, #00d2ff, #7b68ee);
+  color: white;
+  border: none;
+}
+
+.action-btn.create:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 210, 255, 0.3);
+}
+
+.action-btn.explore {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ccc;
+}
+
+.action-btn.explore:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
