@@ -11,6 +11,7 @@ const ChatWindow = ({ room }) => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
   const typingTimeoutRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -41,7 +42,7 @@ const ChatWindow = ({ room }) => {
     inputRef.current?.focus();
   }, [room]);
 
-  // Listen for new real-time messages + typing
+  // Listen for real-time messages + typing + presence
   useEffect(() => {
     if (!socket || !room) return;
 
@@ -50,16 +51,15 @@ const ChatWindow = ({ room }) => {
     const handleNewMessage = (message) => {
       if (message.room === room._id) {
         setMessages((prev) => [...prev, message]);
-        // Remove from typing when they send a message
         setTypingUsers((prev) =>
-          prev.filter((u) => u.userId !== message.sender?._id),
+          prev.filter((u) => u.userId !== message.sender?._id)
         );
       }
     };
 
     const handleTyping = ({ userId, username, isTyping, roomId }) => {
       if (roomId !== room._id) return;
-      if (userId === user?._id) return; // ignore own typing
+      if (userId === user?._id) return;
 
       setTypingUsers((prev) => {
         if (isTyping) {
@@ -73,12 +73,37 @@ const ChatWindow = ({ room }) => {
       });
     };
 
+    const handleUserOnline = ({ userId }) => {
+      setOnlineUsers((prev) => new Set([...prev, userId]));
+    };
+
+    const handleUserOffline = ({ userId }) => {
+      setOnlineUsers((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
+    };
+
+    const handleOnlineList = ({ userIds }) => {
+      setOnlineUsers(new Set(userIds));
+    };
+
     socket.on("new_message", handleNewMessage);
     socket.on("user_typing", handleTyping);
+    socket.on("user_online", handleUserOnline);
+    socket.on("user_offline", handleUserOffline);
+    socket.on("online_users", handleOnlineList);
+
+    // Request current online users for this room
+    socket.emit("get_online_users", { roomId: room._id });
 
     return () => {
       socket.off("new_message", handleNewMessage);
       socket.off("user_typing", handleTyping);
+      socket.off("user_online", handleUserOnline);
+      socket.off("user_offline", handleUserOffline);
+      socket.off("online_users", handleOnlineList);
       socket.emit("leave_room", { roomId: room._id });
       setTypingUsers([]);
     };
@@ -109,6 +134,25 @@ const ChatWindow = ({ room }) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  // Get display name for the room
+  const getRoomDisplayName = () => {
+    if (!room) return "";
+    if (room.type === "group") return room.name;
+    const otherUser = room.members?.find(
+      (m) => m._id?.toString() !== user?._id?.toString()
+    );
+    return otherUser?.displayName || otherUser?.username || room.name;
+  };
+
+  // Get online count (excluding self)
+  const getOnlineCount = () => {
+    let count = 0;
+    onlineUsers.forEach((id) => {
+      if (id !== user?._id) count++;
+    });
+    return count;
+  };
+
   if (!room) {
     return (
       <div className="chat-window empty-state">
@@ -119,6 +163,8 @@ const ChatWindow = ({ room }) => {
     );
   }
 
+  const onlineCount = getOnlineCount();
+
   return (
     <div className="chat-window">
       {/* Room Header */}
@@ -128,12 +174,42 @@ const ChatWindow = ({ room }) => {
             {room.type === "group" ? "🏠" : "🔒"}
           </span>
           <div>
-            <h2>{room.name}</h2>
+            <h2>{getRoomDisplayName()}</h2>
             <span className="chat-members">
               {room.members?.length || 0} members
+              {onlineCount > 0 && (
+                <span className="online-count">
+                  {" "}
+                  · {onlineCount} online
+                </span>
+              )}
             </span>
           </div>
         </div>
+
+        {/* Online Avatars */}
+        {room.members && room.members.length > 0 && (
+          <div className="online-avatars">
+            {room.members
+              .filter((m) => m._id?.toString() !== user?._id?.toString())
+              .slice(0, 5)
+              .map((member) => (
+                <div
+                  key={member._id}
+                  className={`mini-avatar ${
+                    onlineUsers.has(member._id) ? "is-online" : ""
+                  }`}
+                  title={`${member.displayName || member.username}${
+                    onlineUsers.has(member._id) ? " (online)" : " (offline)"
+                  }`}
+                >
+                  {member.displayName?.charAt(0) ||
+                    member.username?.charAt(0) ||
+                    "?"}
+                </div>
+              ))}
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -146,7 +222,8 @@ const ChatWindow = ({ room }) => {
           </div>
         ) : (
           messages.map((msg) => {
-            const isOwn = msg.sender?._id?.toString() === user?._id?.toString();
+            const isOwn =
+              msg.sender?._id?.toString() === user?._id?.toString();
 
             return (
               <div
@@ -200,7 +277,6 @@ const ChatWindow = ({ room }) => {
           value={newMessage}
           onChange={(e) => {
             setNewMessage(e.target.value);
-            // Emit typing events
             if (socket && room) {
               socket.emit("typing_start", { roomId: room._id });
               clearTimeout(typingTimeoutRef.current);
