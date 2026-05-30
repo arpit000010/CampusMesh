@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useSocket } from "../context/SocketContext";
 import api from "../services/api";
-import "../styles/chatwindow.css";
+import "../styles/chatWindow.css";
 
 const ChatWindow = ({ room }) => {
   const { user } = useAuth();
