@@ -30,7 +30,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true, // allows cookies to be sent cross-origin
-  })
+  }),
 );
 app.use(express.json()); // parse JSON request bodies
 

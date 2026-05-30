@@ -25,7 +25,8 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Connect to Socket.io with JWT
-    const newSocket = io("http://localhost:5001", {
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5001";
+    const newSocket = io(SOCKET_URL, {
       auth: { token },
     });
 
